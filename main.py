@@ -12,9 +12,15 @@ import threading
 import time
 import datetime
 import mysql.connector
+import uuid
 from mysql.connector import Error
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+
+def generate_unique_filename(base_name, extension='jpg'):
+    unique_id = uuid.uuid4().hex
+    return f"{base_name}_{unique_id}.{extension}"
+
 
 def get_config_value_from_mongodb(cctv_code, key):
     # Koneksi ke MongoDB
@@ -41,7 +47,8 @@ def get_config_value_from_mongodb(cctv_code, key):
 # Load environment variables from .env file
 load_dotenv()
 
-v_id = "DFNIN13"
+v_id = "DFNOUT01"
+# v_id = "DFNIN13"
 
 video_path = get_config_value_from_mongodb(v_id,"RTSP_URL")
 capture_folder = get_config_value_from_mongodb(v_id,"CAPTURE_FOLDER")
@@ -747,17 +754,21 @@ def capture_image(frame, bbox, count):
     # Crop the image using bounding box
     cropped_image = frame[y1:y2, x1:x2]
     
+    # Generate a unique filename
+    unique_filename = f"person_{uuid.uuid4().hex}.jpg"
+    file_path = os.path.join(capture_folder, unique_filename)
+    
     # Save the cropped image
-    file_path = os.path.join(capture_folder, f"person_{count}.jpg")
     cv2.imwrite(file_path, cropped_image)
-
+    
     # Add the captured image to the list
     captured_images.append(file_path)
     if len(captured_images) > 10:
-        captured_images.pop(0)  # Keep only the latest 3 images
-
+        captured_images.pop(0)  # Keep only the latest 10 images
+    
     # Update the image labels
     update_image_labels()
+
 
 # Function to update image labels
 def update_image_labels():
